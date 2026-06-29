@@ -17,17 +17,26 @@ if(NOT CMAKE_THREAD_LIBS_INIT)
     set(Threads_FOUND TRUE)
 endif()
 
-find_package(QT NAMES Qt6 COMPONENTS Core Network REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network REQUIRED)
+find_package(QT NAMES Qt6 COMPONENTS Core Network Concurrent REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Concurrent REQUIRED)
 
 set(SOURCES
     main.cpp
     server.cpp
+
+    controller.cpp
+    decoder.cpp
+    filewatcherworker.cpp
 )
 
 set(HEADERS
     protocol.h
     server.h
+
+    adcm_df.h
+    controller.h
+    decoder.h
+    filewatcherworker.h
 )
 
 add_executable(adcmminer-server
@@ -35,7 +44,31 @@ add_executable(adcmminer-server
   ${SOURCES}
 )
 
+# Get ROOT include path
+execute_process(
+    COMMAND root-config --incdir
+    OUTPUT_VARIABLE ROOT_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get ROOT libraries
+execute_process(
+    COMMAND root-config --libs
+    OUTPUT_VARIABLE ROOT_LIBS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Split the libraries into a list
+string(REPLACE " " ";" ROOT_LIBRARIES ${ROOT_LIBS})
+
+target_include_directories(adcmminer-server PRIVATE
+    ${ROOT_INCLUDE_DIR}
+)
+
 target_link_libraries(adcmminer-server
     Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Concurrent
     Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Gui
+    ${ROOT_LIBRARIES}
 )

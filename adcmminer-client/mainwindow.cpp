@@ -47,6 +47,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_gLleft->addWidget(m_pushButtonReset);
     m_pushButtonConnect = new QPushButton(tr("Connect"), m_widgetLeft);
     m_gLleft->addWidget(m_pushButtonConnect);
+    m_pushButtonTest = new QPushButton(tr("Test"), m_widgetLeft);
+    m_gLleft->addWidget(m_pushButtonTest);
     QWidget *timeWidget = new QWidget(m_widgetLeft);
     QVBoxLayout *timeLayout = new QVBoxLayout(timeWidget);
     m_timeLabel = new QLabel(tr("Time, s"), m_widgetLeft);
@@ -127,6 +129,13 @@ MainWindow::MainWindow(QWidget *parent)
         const QString serverName = "ADCMMiner Server";
         connectToServer(serverName);
     });
+
+    connect(m_pushButtonTest, &QPushButton::clicked, this, [&](){
+        if (m_client && m_client->isConnected()) {
+            m_client->requestServerStatus();
+        }
+    });
+
 
     setupTimeCorrectedByAlpha();
     setupEnergyByAlpha();
@@ -281,12 +290,14 @@ void MainWindow::connectToServer(const QString &serverName)
                 this, &MainWindow::serverConnectionError);
         connect(m_client, &Client::serverStatusReceived,
                 this, &MainWindow::serverStatusReceived);
+        m_client->connectToServer();
     }
 }
 
 void MainWindow::serverConnected()
 {
-    m_serverStatusMessageLabel->setText(QString("<span>%1</span>").arg(QString::fromUtf8(u8"\U0001F7E2")));
+    qDebug() << "serverConnected";
+    m_serverStatusMessageLabel->setText(QString("%1").arg(QString::fromUtf8(u8"\U0001F7E2")));
 }
 
 void MainWindow::serverDisconnected()

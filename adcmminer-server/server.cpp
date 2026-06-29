@@ -12,6 +12,9 @@ Server::Server(QObject *parent)
     , m_nextClientId(1)
     , m_threadPool(new QThreadPool(this))
 {
+
+    m_controller = new Controller("/misc/agpk_std/adcm.dat");
+
     // Configure thread pool
     m_threadPool->setMaxThreadCount(QThread::idealThreadCount());
 
@@ -118,38 +121,25 @@ void Server::onNewConnection()
 void Server::onReadyRead()
 {
     QLocalSocket *socket = qobject_cast<QLocalSocket*>(sender());
-    if (!socket) return;
+        if (!socket) return;
 
-    // Find client
-    ClientConnection *client = nullptr;
-    for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
-        if (it.value()->socket == socket) {
-            client = it.value();
-            break;
+        // Find client
+        ClientConnection *client = nullptr;
+        for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
+            if (it.value()->socket == socket) {
+                client = it.value();
+                break;
+            }
         }
-    }
 
-    if (!client) return;
+        if (!client) return;
 
-    client->buffer.append(socket->readAll());
+        // Append new data to buffer
+        client->buffer.append(socket->readAll());
 
-    // Process complete frames
-    while (client->buffer.size() > sizeof(quint8)) {
-        QDataStream stream(client->buffer);
-        stream.setVersion(QDataStream::Qt_6_0);
+        // Process all complete frames
+        processFrames(client);
 
-        qint64 startPos = stream.device()->pos();
-
-        try {
-            processFrame(client);
-
-            qint64 bytesRead = stream.device()->pos() - startPos;
-            client->buffer.remove(0, bytesRead);
-        } catch (...) {
-            // Incomplete frame, wait for more data
-            break;
-        }
-    }
 }
 
 void Server::onDisconnected()
@@ -176,27 +166,60 @@ void Server::onDisconnected()
     socket->deleteLater();
 }
 
-void Server::processFrame(ClientConnection *client)
+void Server::processFrames(ClientConnection *client)
 {
-    QDataStream stream(client->buffer);
-    stream.setVersion(QDataStream::Qt_6_0);
+    bool processedFrame = true;
 
-    Protocol::Frame frame = Protocol::deserializeFrame(stream);
+        // Keep processing while we successfully read frames
+        while (processedFrame && client->buffer.size() >= sizeof(quint32)) {
+            processedFrame = false;
 
-    switch (frame.type) {
-        case Protocol::MessageType::GetStatus:
-            handleGetStatus(client, frame.payload);
-            break;
-        case Protocol::MessageType::Heartbeat:
-            handleHeartbeat(client);
-            break;
-        case Protocol::MessageType::Shutdown:
-            handleShutdown(client);
-            break;
-        default:
-            QTextStream(stderr) << "Unknown message type\n";
-            break;
-    }
+            try {
+                int bytesRead = 0;
+                Protocol::Frame frame = Protocol::deserializeFrame(client->buffer, bytesRead);
+
+                if (bytesRead > 0) {
+                    // Process the frame
+                    switch (frame.type) {
+                        case Protocol::MessageType::GetStatus:
+                            handleGetStatus(client, frame.payload);
+                            break;
+                        case Protocol::MessageType::Heartbeat:
+                            handleHeartbeat(client);
+                            break;
+                        case Protocol::MessageType::Shutdown:
+                            handleShutdown(client);
+                            break;
+                        default:
+                            QTextStream(stderr) << "Unknown message type: "
+                                               << (int)frame.type << "\n";
+                            break;
+                    }
+
+                    // Remove processed data from buffer
+                    client->buffer.remove(0, bytesRead);
+                    processedFrame = true; // Try to process another frame
+                }
+
+            } catch (const std::runtime_error &e) {
+                QString errorMsg = e.what();
+
+                if (errorMsg == "Incomplete frame data") {
+                    // This is normal - wait for more data
+                    // Just break and wait for next readyRead
+                    break;
+                } else {
+                    // Actual error - log it and remove problematic data
+                    QTextStream(stderr) << "Frame parsing error: " << errorMsg << "\n";
+
+                    // Try to recover by skipping one byte
+                    if (!client->buffer.isEmpty()) {
+                        client->buffer.remove(0, 1);
+                        processedFrame = true; // Try again after skipping bad byte
+                    }
+                }
+            }
+        }
 }
 
 
@@ -214,6 +237,7 @@ void Server::handleGetStatus(ClientConnection *client,
     status["server_uptime"] = "Running...";
 
     QByteArray responseData = QJsonDocument(status).toJson(QJsonDocument::Compact);
+
     sendFrame(client->socket, Protocol::MessageType::StatusResponse, "", responseData);
 }
 
@@ -232,14 +256,27 @@ void Server::handleShutdown(ClientConnection *client)
 void Server::sendFrame(QLocalSocket *socket, Protocol::MessageType type,
                                  const QString &requestId, const QByteArray &payload)
 {
-    Protocol::Frame frame;
-    frame.type = type;
-    frame.requestId = requestId;
-    frame.payload = payload;
+    if (!socket || socket->state() != QLocalSocket::ConnectedState) {
+            return;
+        }
 
-    QByteArray data = Protocol::serializeFrame(frame);
-    socket->write(data);
-    socket->flush();
+        Protocol::Frame frame;
+        frame.type = type;
+        frame.requestId = requestId;
+        frame.payload = payload;
+
+        QByteArray data = Protocol::serializeFrame(frame);
+
+        qint64 bytesWritten = socket->write(data);
+        if (bytesWritten == -1) {
+            QTextStream(stderr) << "Error writing to socket: " << socket->errorString() << "\n";
+            return;
+        }
+
+        bool flushed = socket->flush();
+        if (!flushed) {
+            QTextStream(stderr) << "Error flushing socket: " << socket->errorString() << "\n";
+        }
 }
 
 void Server::sendError(QLocalSocket *socket, const QString &requestId,

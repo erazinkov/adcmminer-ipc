@@ -83,5 +83,6 @@ private:
 
     QLabel *m_serverStatusMessageLabel;
     QPushButton *m_pushButtonConnect;
+    QPushButton *m_pushButtonTest;
 };
 #endif // MAINWINDOW_H

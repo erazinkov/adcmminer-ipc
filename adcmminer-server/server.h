@@ -10,6 +10,8 @@
 #include <QThreadPool>
 #include "protocol.h"
 
+#include "controller.h"
+
 struct ClientConnection {
     QLocalSocket *socket = nullptr;
     QString identifier;
@@ -48,7 +50,7 @@ private slots:
     void onDisconnected();
 
 private:
-    void processFrame(ClientConnection *client);
+    void processFrames(ClientConnection *client);
     void handleGetStatus(ClientConnection *client, const QByteArray &payload);
     void handleHeartbeat(ClientConnection *client);
     void handleShutdown(ClientConnection *client);
@@ -66,6 +68,8 @@ private:
     QMap<quintptr, ClientConnection *> m_clients;
     quintptr m_nextClientId;
     QThreadPool *m_threadPool;
+
+    Controller *m_controller;
 };
 
 

@@ -37,7 +37,7 @@ private slots:
     void onError(QLocalSocket::LocalSocketError socketError);
 
 private:
-    void processFrame();
+    void processFrames();
     void handleProgress(const QByteArray &payload);
     void handleError(const QByteArray &payload);
     void handleStatusResponse(const QByteArray &payload);

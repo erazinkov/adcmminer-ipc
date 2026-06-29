@@ -20,10 +20,8 @@ Client::Client(const QString &serverName, QObject *parent)
 
     connect(m_timer, &QTimer::timeout, this, [&](){
         const QString serverName = "ADCMMiner Server";
-        connectToServer();
+        connectToServer(1'000);
     });
-
-    connectToServer();
 }
 
 Client::~Client()
@@ -76,18 +74,34 @@ void Client::sendFrame(Protocol::MessageType type, const QString &requestId,
                                const QByteArray &payload)
 {
     if (!isConnected()) {
-        emit connectionError("Not connected to server");
-        return;
-    }
+            emit connectionError("Not connected to server");
+            return;
+        }
 
-    QByteArray data = Protocol::serializeFrame({type, requestId, payload});
-    m_socket->write(data);
-    m_socket->flush();
+        Protocol::Frame frame;
+        frame.type = type;
+        frame.requestId = requestId;
+        frame.payload = payload;
+
+        QByteArray data = Protocol::serializeFrame(frame);
+
+        qint64 bytesWritten = m_socket->write(data);
+        if (bytesWritten == -1) {
+            emit connectionError(QString("Write error: %1").arg(m_socket->errorString()));
+            return;
+        }
+
+        if (bytesWritten != data.size()) {
+            emit connectionError(QString("Incomplete write: %1 of %2 bytes")
+                               .arg(bytesWritten).arg(data.size()));
+            return;
+        }
+
+        m_socket->flush();
 }
 
 void Client::onConnected()
 {
-    qDebug() << "onConnected";
     emit connected();
 }
 
@@ -101,7 +115,7 @@ void Client::onDisconnected()
 void Client::onReadyRead()
 {
     m_buffer.append(m_socket->readAll());
-    processFrame();
+    processFrames();
 }
 
 void Client::onError(QLocalSocket::LocalSocketError socketError)
@@ -114,36 +128,56 @@ void Client::onError(QLocalSocket::LocalSocketError socketError)
     emit connectionError(m_socket->errorString());
 }
 
-void Client::processFrame()
+void Client::processFrames()
 {
-    while (m_buffer.size() > sizeof(quint8)) {
-        QDataStream stream(m_buffer);
-        stream.setVersion(QDataStream::Qt_6_0);
+    bool processedFrame = true;
 
-        qint64 startPos = stream.device()->pos();
+        while (processedFrame && m_buffer.size() >= sizeof(quint32)) {
+            processedFrame = false;
 
-        try {
-            Protocol::Frame frame = Protocol::deserializeFrame(stream);
+            try {
+                int bytesRead = 0;
+                Protocol::Frame frame = Protocol::deserializeFrame(m_buffer, bytesRead);
 
-            switch (frame.type) {
-                case Protocol::MessageType::ErrorResponse:
-                    handleError(frame.payload);
+                if (bytesRead > 0) {
+                    // Process based on type
+                    switch (frame.type) {
+                        case Protocol::MessageType::ErrorResponse:
+                            handleError(frame.payload);
+                            break;
+                        case Protocol::MessageType::StatusResponse:
+                            handleStatusResponse(frame.payload);
+                            break;
+                        case Protocol::MessageType::Heartbeat:
+                            // Heartbeat acknowledged
+                            break;
+                        default:
+                            qDebug() << "Unknown message type:" << (int)frame.type;
+                            break;
+                    }
+
+                    // Remove processed data
+                    m_buffer.remove(0, bytesRead);
+                    processedFrame = true;
+                }
+
+            } catch (const std::runtime_error &e) {
+                QString errorMsg = e.what();
+
+                if (errorMsg == "Incomplete frame data") {
+                    // Wait for more data - normal case
                     break;
-                case Protocol::MessageType::StatusResponse:
-                    handleStatusResponse(frame.payload);
-                    break;
-                case Protocol::MessageType::Heartbeat:
-                    break;
-                default:
-                    break;
+                } else {
+                    qDebug() << "Frame parsing error:" << errorMsg;
+
+                    // Skip problematic byte
+                    if (!m_buffer.isEmpty()) {
+                        m_buffer.remove(0, 1);
+                        processedFrame = true;
+                    }
+                }
             }
-
-            qint64 bytesRead = stream.device()->pos() - startPos;
-            m_buffer.remove(0, bytesRead);
-        } catch (...) {
-            break;
         }
-    }
 }
 void Client::handleError(const QByteArray &payload)
 {
@@ -160,5 +194,6 @@ void Client::handleError(const QByteArray &payload)
 void Client::handleStatusResponse(const QByteArray &payload)
 {
     QJsonDocument doc = QJsonDocument::fromJson(payload);
+    qDebug() << doc;
     emit serverStatusReceived(doc.object());
 }

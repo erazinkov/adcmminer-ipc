@@ -46,21 +46,60 @@ namespace Protocol {
         QDataStream stream(&block, QIODevice::WriteOnly);
         stream.setVersion(QDataStream::Qt_6_0);
 
-        stream << (quint8)frame.type;
-        stream << frame.requestId;
-        stream << frame.payload;
+        // Create payload data
+        QByteArray payloadData;
+        QDataStream payloadStream(&payloadData, QIODevice::WriteOnly);
+        payloadStream.setVersion(QDataStream::Qt_6_0);
+        payloadStream << (quint8)frame.type;
+        payloadStream << frame.requestId;
+        payloadStream << frame.payload;
+
+        // Write total size first (4 bytes for size + payload)
+        quint32 totalSize = sizeof(quint32) + payloadData.size();
+        stream << totalSize;
+
+        // Write the actual payload
+        stream.writeRawData(payloadData.constData(), payloadData.size());
 
         return block;
     }
 
-    inline Frame deserializeFrame(QDataStream &stream) {
+    inline Frame deserializeFrame(const QByteArray &data, int &bytesRead) {
         Frame frame;
-        quint8 type;
-        stream >> type;
-        frame.type = static_cast<MessageType>(type);
-        stream >> frame.requestId;
-        stream >> frame.payload;
-        return frame;
+                bytesRead = 0;
+
+                if (data.size() < sizeof(quint32)) {
+                    throw std::runtime_error("Not enough data for size field");
+                }
+
+                // Read total size (including the size field itself)
+                QDataStream sizeStream(data.left(sizeof(quint32)));
+                sizeStream.setVersion(QDataStream::Qt_6_0);
+                quint32 totalSize;
+                sizeStream >> totalSize;
+
+                // Check if we have enough data
+                if (data.size() < totalSize) {
+                    throw std::runtime_error("Incomplete frame data");
+                }
+
+                // Extract payload (everything after size field)
+                QByteArray payloadData = data.mid(sizeof(quint32), totalSize - sizeof(quint32));
+
+                // Parse payload
+                QDataStream payloadStream(payloadData);
+                payloadStream.setVersion(QDataStream::Qt_6_0);
+
+                quint8 type;
+                payloadStream >> type;
+                frame.type = static_cast<MessageType>(type);
+                payloadStream >> frame.requestId;
+                payloadStream >> frame.payload;
+
+                // Report how many bytes were consumed
+                bytesRead = totalSize;
+
+                return frame;
     }
 
     // Create request
