@@ -126,15 +126,19 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(m_pushButtonReset, &QPushButton::clicked, m_controller, &Controller::operateReset);
     connect(m_pushButtonConnect, &QPushButton::clicked, this, [&](){
-        const QString serverName = "ADCMMiner Server";
+        const QString serverName = "ADCMMiner Server1";
         connectToServer(serverName);
     });
 
     connect(m_pushButtonTest, &QPushButton::clicked, this, [&](){
-        if (m_client && m_client->isConnected()) {
-            m_client->requestServerStatus();
-        }
+        TaskData task;
+        task.deadline = QDateTime::currentDateTimeUtc();
+        task.id = 1;
+        task.title = "Task1";
+        task.isCompleted = false;
+        m_client->sendTask(task);
     });
+
 
 
     setupTimeCorrectedByAlpha();
@@ -276,21 +280,29 @@ void MainWindow::openFile() {
 
 void MainWindow::connectToServer(const QString &serverName)
 {
-    if (m_client && m_client->isConnected()) {
+    if (m_client) {
         m_client->disconnectFromServer();
         return;
     }
     if (!m_client) {
-        m_client = new Client(serverName, this);
+        m_client = new Client(this);
         connect(m_client, &Client::connected,
                 this, &MainWindow::serverConnected);
         connect(m_client, &Client::disconnected,
                 this, &MainWindow::serverDisconnected);
         connect(m_client, &Client::connectionError,
                 this, &MainWindow::serverConnectionError);
-        connect(m_client, &Client::serverStatusReceived,
-                this, &MainWindow::serverStatusReceived);
-        m_client->connectToServer();
+//        connect(m_client, &Client::serverStatusReceived,
+//                this, &MainWindow::serverStatusReceived);
+        connect(m_client, &Client::resultReceived,
+                this, [](ResultData resultData){
+            qDebug() << "Клиент успешно принял структуру TaskData:";
+            qDebug() << "ID:" << resultData.id;
+            qDebug() << "Title:" << resultData.title;
+            qDebug() << "Deadline:" << resultData.deadline.toString();
+            qDebug() << "Status (Completed):" << resultData.isCompleted;
+        });
+        m_client->connectToServer(serverName);
     }
 }
 
