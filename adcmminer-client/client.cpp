@@ -1,6 +1,7 @@
 #include "client.h"
 
 #include <QDataStream>
+#include <QPointF>
 #include <iostream>
 
 #include "protocol.h"
@@ -107,7 +108,32 @@ void Client::onReadyRead() {
         // Вторая транзакция: для чтения тела конкретного сообщения
         in.startTransaction();
 
-        if (type == MessageType::ResultPayload) {
+        if (type == MessageType::ComplexDataPayload) {
+            in.startTransaction(); // Начинаем транзакцию для чтения тела данных [1]
+
+            // Создаем пустые объекты для приема [1]
+            QMap<QString, QList<QPointF>> receivedData;
+            QMap<QString, QStringList> receivedText;
+
+            // Читаем данные строго в том же порядке, в каком записывали! [1]
+            in >> receivedData;
+            in >> receivedText;
+
+            if (!in.commitTransaction()) {
+                // Если сеть не успела передать все элементы QMap,
+                // транзакция откатится, и мы вернемся сюда при следующем readyRead [1]
+                break;
+            }
+
+            // Данные успешно и полностью получены без блокировки потока [1]
+            qDebug() << "Получены комплексные данные.";
+            qDebug() << "Ключей в карте координат:" << receivedData.size();
+            qDebug() << "Ключей в карте текстов:" << receivedText.size();
+
+            // Передаем данные дальше (например, генерируем сигнал для UI) [1]
+            emit complexDataReceived(receivedData, receivedText);
+        }
+        else if (type == MessageType::ResultPayload) {
             ResultData result;
 
             // Используем перегруженный оператор >> для десериализации структуры

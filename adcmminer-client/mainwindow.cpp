@@ -302,6 +302,7 @@ void MainWindow::connectToServer(const QString &serverName)
             qDebug() << "Deadline:" << resultData.deadline.toString();
             qDebug() << "Status (Completed):" << resultData.isCompleted;
         });
+        connect(m_client, &Client::complexDataReceived, this, &MainWindow::newDataEnergyByAlpha);
         m_client->connectToServer(serverName);
     }
 }

@@ -135,6 +135,37 @@ void Server::sendResultToClient(QLocalSocket *clientSocket, const ResultData &re
     qDebug() << "Результат вычислений для задачи #" << result.id << "отправлен клиенту.";
 }
 
+void Server::sendComplexDataToClient(QLocalSocket *clientSocket,
+                                          const QMap<QString, QList<QPointF>> &data,
+                                          const QMap<QString, QStringList> &text)
+{
+    if (!clientSocket || clientSocket->state() != QLocalSocket::ConnectedState) {
+        return;
+    }
+
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_DefaultCompiledVersion); // Фиксируем версию Qt для сериализации [1]
+
+    // 1. Резервируем 4 байта под размер пакета [1]
+    out << quint32(0);
+
+    // 2. Записываем тип сообщения [1]
+    out << static_cast<quint8>(MessageType::ComplexDataPayload);
+
+    // 3. Записываем сами коллекции (Qt автоматически сериализует QMap, QList и QPointF) [1]
+    out << data;
+    out << text;
+
+    // 4. Возвращаемся в начало и перезаписываем точный размер тела пакета [1]
+    out.device()->seek(0);
+    out << quint32(block.size() - sizeof(quint32));
+
+    // 5. Неблокирующая отправка в буфер [1]
+    clientSocket->write(block);
+    clientSocket->flush();
+}
+
 void Server::onClientDisconnected() {
     auto *clientSocket = qobject_cast<QLocalSocket*>(sender());
     if (!clientSocket) return;

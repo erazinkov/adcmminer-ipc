@@ -32,6 +32,9 @@ private:
     Controller *m_controller;
 
     void sendResultToClient(QLocalSocket *clientSocket, const ResultData &result);
+    void sendComplexDataToClient(QLocalSocket *clientSocket,
+                                 const QMap<QString, QList<QPointF>> &data,
+                                 const QMap<QString, QStringList> &text);
 };
 
 

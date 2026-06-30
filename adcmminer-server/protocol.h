@@ -8,7 +8,8 @@
 enum class MessageType : quint8 {
     Heartbeat = 1,
     TaskPayload = 2,
-    ResultPayload = 3
+    ResultPayload = 3,
+    ComplexDataPayload = 4
 };
 
 struct TaskData {
