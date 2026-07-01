@@ -32,6 +32,9 @@ private slots:
     void onReadyRead();
     void onErrorOccurred(QLocalSocket::LocalSocketError socketError);
 
+    void attemptReconnect();   // Слот для отправки запроса на подключение
+    void handleHeartbeatTimeout(); // Слот, если сервер долго молчит
+
     void sendHeartbeat();
 private:
     QLocalSocket *m_socket;
@@ -39,6 +42,7 @@ private:
     QString m_serverName;
 
     QTimer *m_heartbeatTimer;
+    QTimer *m_reconnectTimer;
 };
 
 #endif // CLIENT_H

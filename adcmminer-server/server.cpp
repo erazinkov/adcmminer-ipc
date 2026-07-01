@@ -2,7 +2,7 @@
 #include <QDataStream>
 #include <QDateTime>
 #include <iostream>
-
+#include <QPointF>
 
 
 Server::Server(QObject *parent)
