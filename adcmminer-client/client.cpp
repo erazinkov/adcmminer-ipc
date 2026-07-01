@@ -24,6 +24,9 @@ Client::Client(QObject *parent)
    m_reconnectTimer = new QTimer(this);
    connect(m_reconnectTimer, &QTimer::timeout, this, &Client::attemptReconnect);
 
+   m_timer = new QTimer(this);
+   m_timer->setInterval(HEARTBEAT_INTERVAL_MS);
+   connect(m_timer, &QTimer::timeout, this, &Client::sendHeartbeat);
 
 //    connect(m_timer, &QTimer::timeout, this, [&](){
 //        if (m_socket->state() == QLocalSocket::ConnectedState) {
@@ -52,6 +55,7 @@ void Client::onConnected() {
     qDebug() << "Успешно подключено к серверу!";
     m_reconnectTimer->stop(); // Подключились -> перестаем долбиться реконнектами
     m_heartbeatTimer->start(HEARTBEAT_TIMEOUT_MS);
+    m_timer->start();
 }
 
 void Client::sendHeartbeat() {
@@ -78,7 +82,9 @@ void Client::onDisconnected()
 {
     qDebug() << "Соединение разорвано со стороны сервера.";
     m_heartbeatTimer->stop();
-
+    if (m_timer->isActive()) {
+        m_timer->stop();
+    }
     // Запускаем таймер реконнекта, если он еще не запущен
     if (!m_reconnectTimer->isActive()) {
         m_reconnectTimer->start(RECONNECT_INTERVAL_MS);

@@ -42,7 +42,7 @@ void Server::onNewConnection() {
 
             // Создаем таймер таймаута специально для этого клиента
             QTimer *clientTimer = new QTimer(clientSocket);
-            clientTimer->setInterval(10'000); // 12 секунд (с запасом на 2 пропущенных пинга)
+            clientTimer->setInterval(10'000);
             clientTimer->setSingleShot(true);
 
             // Если таймер сработал — клиент признается мертвым
@@ -53,6 +53,7 @@ void Server::onNewConnection() {
 
             connect(clientSocket, &QLocalSocket::readyRead, this, [this, clientSocket, clientTimer]() {
                 // Сбрасываем и перезапускаем таймер, так как клиент подал признаки жизни
+                qDebug() << "Сбрасываем и перезапускаем таймер, так как клиент подал признаки жизни";
                 clientTimer->start();
                 this->processIncomingData(clientSocket);
             });
@@ -89,6 +90,9 @@ void Server::processIncomingData(QLocalSocket *clientSocket) {
             // Пакет успешно прочитан. Делать ничего не нужно,
             // так как таймер clientTimer уже перезапустился в лямбде выше.
             qDebug() << "Получен Heartbeat от клиента.";
+            if (clientSocket && clientSocket->state() == QLocalSocket::ConnectedState) {
+                this->sendHeartbeatToClient(clientSocket);
+            }
         }
         else if (type == MessageType::TaskPayload) {
             // Читаем полезную нагрузку (например, структуру TaskData из прошлого шага)
@@ -117,6 +121,39 @@ void Server::processIncomingData(QLocalSocket *clientSocket) {
             qDebug() << "Status (Completed):" << task.isCompleted;
         }
     }
+}
+
+
+void Server::sendHeartbeatToClient(QLocalSocket *clientSocket) {
+    // 1. Проверяем, что клиент действительно подключен
+    if (!clientSocket || clientSocket->state() != QLocalSocket::ConnectedState) {
+        return;
+    }
+
+    // 2. Создаем байтовый массив (буфер) для сборки пакета
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_DefaultCompiledVersion);
+
+    // 3. Резервируем первые 4 байта под размер пакета (записываем туда 0)
+    out << quint32(0);
+
+    // 4. Записываем тип сообщения (Heartbeat)
+    out << static_cast<quint8>(MessageType::Heartbeat);
+
+    // Подсказка: Если вам нужно передать дополнительную информацию
+    // (например, timestamp сервера), её можно записать прямо здесь:
+    // out << QDateTime::currentMSecsSinceEpoch();
+
+    // 5. Возвращаемся в начало структуры данных и перезаписываем точный размер пакета.
+    // Размер равен: общая длина блока минус 4 байта, занятые самим заголовком размера.
+    out.device()->seek(0);
+    out << quint32(block.size() - sizeof(quint32));
+
+    // 6. Записываем пакет в системный буфер сокета (асинхронная неблокирующая операция)
+    clientSocket->write(block);
+
+    qDebug() << "Сервер отправил Heartbeat пакет размером:" << block.size() << "байт.";
 }
 
 void Server::sendResultToClient(QLocalSocket *clientSocket, const ResultData &result) {

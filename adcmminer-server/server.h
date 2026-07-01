@@ -31,6 +31,7 @@ private:
     QLocalServer *m_server;
     Controller *m_controller;
 
+    void sendHeartbeatToClient(QLocalSocket *clientSocket);
     void sendResultToClient(QLocalSocket *clientSocket, const ResultData &result);
     void sendComplexDataToClient(QLocalSocket *clientSocket,
                                  const QMap<QString, QList<QPointF>> &data,
