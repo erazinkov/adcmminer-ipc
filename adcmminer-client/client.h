@@ -38,11 +38,14 @@ private slots:
     void sendHeartbeat();
 private:
     QLocalSocket *m_socket;
-    QTimer *m_timer;
+//    QTimer *m_timer;
     QString m_serverName;
 
     QTimer *m_heartbeatTimer;
     QTimer *m_reconnectTimer;
+
+    const int HEARTBEAT_TIMEOUT_MS = 10'000;
+    const int RECONNECT_INTERVAL_MS = 3'000;
 };
 
 #endif // CLIENT_H
