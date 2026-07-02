@@ -21,13 +21,15 @@ void ProcessingWorker::doWorkS(const QString &path)
     }
     auto stop = std::chrono::steady_clock::now();
     m.insert(tr("Decoding"), std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+    std::cout << "Decoding " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << std::endl;
     start = std::chrono::steady_clock::now();
     m_calibration->setNewData_o(m_decoder->events_o(), m_decoder->channels(), m_decoder->time(), m_decoder->counters());
     m_calibration->process();
     stop = std::chrono::steady_clock::now();
     m.insert(tr("Calibration"), std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+    std::cout << "Calibration " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << std::endl;
     start = std::chrono::steady_clock::now();
-    histToPointsTimeCorrectedByAlpha();
+//    histToPointsTimeCorrectedByAlpha();
     histToPointsAmpByGamma();
     stop = std::chrono::steady_clock::now();
     QMap<QString, double> countersA;

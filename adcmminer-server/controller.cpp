@@ -8,30 +8,30 @@ Controller::Controller(const QString &path)
     m_fileWatcherWorker = new FileWatcherWorker(path);
     m_fileWatcherWorker->moveToThread(m_fileWatcherThread);
 
-//    m_processingThread = new QThread(this);
-//    m_processingWorker = new ProcessingWorker();
-//    m_processingWorker->moveToThread(m_processingThread);
+    m_processingThread = new QThread(this);
+    m_processingWorker = new ProcessingWorker();
+    m_processingWorker->moveToThread(m_processingThread);
 
     connect(m_timer, &QTimer::timeout, m_fileWatcherWorker, &FileWatcherWorker::doWorkCheck);
     connect(this, &Controller::operatePath, m_fileWatcherWorker, &FileWatcherWorker::doWorkPath);
     connect(m_fileWatcherThread, &QThread::finished, m_fileWatcherWorker, &QObject::deleteLater);
 //    connect(this, &Controller::operateReset, m_processingWorker, &ProcessingWorker::doWorkReset);
 //    connect(m_processingWorker, &ProcessingWorker::resultReadyTimeCorrectedByAlpha, this, &Controller::handleResultsTimeCorrectedByAlpha);
-//    connect(m_processingWorker, &ProcessingWorker::resultReadyEnergyByAlpha, this, &Controller::handleResultsEnergyByAlpha);
+    connect(m_processingWorker, &ProcessingWorker::resultReadyEnergyByAlpha, this, &Controller::handleResultsEnergyByAlpha);
 //    connect(m_processingWorker, &ProcessingWorker::resultReadyProcessing, this, &Controller::handleResultsProcessing);
-//    connect(m_processingThread, &QThread::finished, m_processingWorker, &QObject::deleteLater);
+    connect(m_processingThread, &QThread::finished, m_processingWorker, &QObject::deleteLater);
 
     connect(m_fileWatcherWorker, &FileWatcherWorker::resultReadyCheck, [this](const QString &message, const QString &path, const bool &isModified){
         qDebug() << message;
         emit handleResultsReadyCheck(message);
         if (isModified) {
-//            m_processingWorker->doWorkS(path);
+            m_processingWorker->doWorkS(path);
         }
     });
 
     m_fileWatcherThread->start();
-//    m_processingThread->start();
-//    m_timer->start();
+    m_processingThread->start();
+    m_timer->start();
 }
 
 Controller::~Controller()
@@ -42,8 +42,8 @@ Controller::~Controller()
     m_fileWatcherThread->quit();
     m_fileWatcherThread->wait();
 
-//    m_processingThread->quit();
-//    m_processingThread->wait();
+    m_processingThread->quit();
+    m_processingThread->wait();
 }
 
 void Controller::operateTimer(bool checked)

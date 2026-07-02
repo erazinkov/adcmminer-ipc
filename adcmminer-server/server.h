@@ -22,14 +22,19 @@ public:
 signals:
     void serverStarted();
     void serverError(const QString &errorText);
+
+
 private slots:
     void onNewConnection();
     void processIncomingData(QLocalSocket *clientSocket);
     void onClientDisconnected();
 
+    void onResultsEnergyByAlpha(const QMap<QString, QList<QPointF>> &data, const QMap<QString, QStringList> &text);
+
 private:
     QLocalServer *m_server;
     Controller *m_controller;
+    QLocalSocket *m_clientSocket{nullptr};
 
     void sendHeartbeatToClient(QLocalSocket *clientSocket);
     void sendResultToClient(QLocalSocket *clientSocket, const ResultData &result);

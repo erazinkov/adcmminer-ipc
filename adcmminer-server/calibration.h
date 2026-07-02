@@ -5,7 +5,7 @@
 
 
 #include "histogrammanager.h"
-#include "timepeaksfinder.h"
+//#include "timepeaksfinder.h"
 #include "energypeak.h"
 #include "peakfinder.h"
 #include "decoder.h"
@@ -44,7 +44,7 @@ private:
     std::map<uint8_t, double> countersA_;
     std::map<std::pair<uint8_t, uint8_t>, double> timeCorrections_;
     dec_ch_t channels_;
-    std::unique_ptr<TimePeaksFinder> timePeaksFinder_; // TODO
+//    std::unique_ptr<TimePeaksFinder> timePeaksFinder_; // TODO
     std::vector<std::vector<EnergyPeak>>  energyPeaks_;
     std::vector<EnergyPeak>  energyPeaksRaw_;
 

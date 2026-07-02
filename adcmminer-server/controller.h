@@ -6,7 +6,7 @@
 #include <QThread>
 
 #include "filewatcherworker.h"
-//#include "processingworker.h"
+#include "processingworker.h"
 
 class Controller : public QObject
 {
@@ -25,7 +25,7 @@ signals:
     void operatePath(const QString &);
 
 //    void handleResultsTimeCorrectedByAlpha(const QMap<QString, QList<QPointF>> &, const QMap<QString, QStringList> &text);
-//    void handleResultsEnergyByAlpha(const QMap<QString, QList<QPointF>> &data, const QMap<QString, QStringList> &text);
+    void handleResultsEnergyByAlpha(const QMap<QString, QList<QPointF>> &data, const QMap<QString, QStringList> &text);
     void handleResultsProcessing(const QMap<QString, double> &data, double t, const QMap<QString, double> &countersA, const QMap<QString, double> &countersG);
 
     void operateS(const QString &);
@@ -35,8 +35,8 @@ private:
     QTimer *m_timer;
     QThread *m_fileWatcherThread;
     FileWatcherWorker *m_fileWatcherWorker;
-//    QThread *m_processingThread;
-//    ProcessingWorker *m_processingWorker;
+    QThread *m_processingThread;
+    ProcessingWorker *m_processingWorker;
 };
 
 #endif // CONTROLLER_H

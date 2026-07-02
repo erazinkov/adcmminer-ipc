@@ -27,16 +27,35 @@ set(SOURCES
     controller.cpp
     decoder.cpp
     filewatcherworker.cpp
+    processingworker.cpp
+    calibration.cpp
+    datadelegate.cpp
+    histogrammanager.cpp
+    peakfinder.cpp
+    energypeak.cpp
+    piecewiselinearfunction.cpp
+#    timepeaksfinder.cpp
+#    channelmap.cpp
 )
 
 set(HEADERS
     protocol.h
     server.h
-
+    constants.h
     adcm_df.h
     controller.h
     decoder.h
     filewatcherworker.h
+    processingworker.h
+    calibration.h
+    datadelegate.h
+    histogrammanager.h
+    peakfinder.h
+    energypeak.h
+    piecewiselinearfunction.h
+    utils.h
+#    timepeaksfinder.h
+#    channelmap.h
 )
 
 add_executable(adcmminer-server

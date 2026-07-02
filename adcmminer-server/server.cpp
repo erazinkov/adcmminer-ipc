@@ -10,8 +10,10 @@ Server::Server(QObject *parent)
 
 {
     m_server = new QLocalServer(this);
-    m_controller = new Controller("/misc/agpk_std/adcm.dat");
+//    m_controller = new Controller("/misc/agpk_std/adcm.dat");
+    m_controller = new Controller("/home/egor/build-adcmemulate-Desktop-Debug/adcm.dat");
 
+    connect(m_controller, &Controller::handleResultsEnergyByAlpha, this, &Server::onResultsEnergyByAlpha);
     connect(m_server, &QLocalServer::newConnection, this, &Server::onNewConnection);
 }
 
@@ -37,18 +39,20 @@ void Server::onNewConnection() {
 //        qDebug() << "Server accepted a new client connection.";
 //    }
     while (m_server->hasPendingConnections()) {
+            m_clientSocket = nullptr;
             QLocalSocket *clientSocket = m_server->nextPendingConnection();
             if (!clientSocket) continue;
-
+            m_clientSocket = clientSocket;
             // Создаем таймер таймаута специально для этого клиента
             QTimer *clientTimer = new QTimer(clientSocket);
             clientTimer->setInterval(10'000);
             clientTimer->setSingleShot(true);
 
             // Если таймер сработал — клиент признается мертвым
-            connect(clientTimer, &QTimer::timeout, this, [clientSocket]() {
+            connect(clientTimer, &QTimer::timeout, this, [clientSocket, this]() {
                 qWarning() << "Клиент молчит слишком долго. Принудительное отключение.";
                 clientSocket->disconnectFromServer();
+                m_clientSocket = nullptr;
             });
 
             connect(clientSocket, &QLocalSocket::readyRead, this, [this, clientSocket, clientTimer]() {
@@ -209,6 +213,14 @@ void Server::onClientDisconnected() {
 
     qDebug() << "Client connection closed.";
     clientSocket->deleteLater();
+}
+
+void Server::onResultsEnergyByAlpha(const QMap<QString, QList<QPointF> > &data, const QMap<QString, QStringList> &text)
+{
+    if (m_clientSocket != nullptr) {
+//        qDebug() << data << text;
+        sendComplexDataToClient(m_clientSocket, data, text);
+    }
 }
 
 bool Server::isRunning() const
