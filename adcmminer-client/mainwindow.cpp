@@ -1,14 +1,11 @@
-//#include <QtConcurrent>
-
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include "calibration.h"
-#include "datadelegate.h"
-
 #include "piechartwidget.h"
 
-
+#include <QSplitter>
+#include <QFileDialog>
+#include <QJsonObject>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -89,7 +86,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_statusMessageLabel->setTextFormat(Qt::RichText);
     m_statusMessageLabel->setText("<span></span>");
     statusBar()->addWidget(m_statusMessageLabel);
-    m_controller = new Controller(m_path);
 
     m_serverStatusMessageLabel = new QLabel;
     m_serverStatusMessageLabel->setTextFormat(Qt::RichText);
@@ -115,16 +111,9 @@ MainWindow::MainWindow(QWidget *parent)
         "}"
     );
 
-
-    connect(m_controller, &Controller::handleResultsReadyCheck, m_statusMessageLabel, &QLabel::setText);
-    connect(m_controller, &Controller::handleResultsTimeCorrectedByAlpha, this, &MainWindow::newDataTimeCorrectedByAlpha);
-    connect(m_controller, &Controller::handleResultsEnergyByAlpha, this, &MainWindow::newDataEnergyByAlpha);
-    connect(m_controller, &Controller::handleResultsProcessing, this, &MainWindow::newDataProcessing);
-    connect(m_pushButtonStartStop, &QPushButton::toggled, m_controller, &Controller::operateTimer);
     connect(m_pushButtonStartStop, &QPushButton::toggled, [this](bool checked){
         m_pushButtonStartStop->setText(checked ? tr("Stop") : tr("Start"));
     });
-    connect(m_pushButtonReset, &QPushButton::clicked, m_controller, &Controller::operateReset);
     connect(m_pushButtonConnect, &QPushButton::clicked, this, [&](){
         const QString serverName = "ADCMMiner Server1";
         connectToServer(serverName);
@@ -274,7 +263,6 @@ void MainWindow::openFile() {
         return;
     }
     m_path = fileName;
-    m_controller->operatePath(m_path);
     m_settings->setPath(m_path);
 }
 

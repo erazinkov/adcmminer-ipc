@@ -17,58 +17,33 @@ if(NOT CMAKE_THREAD_LIBS_INIT)
     set(Threads_FOUND TRUE)
 endif()
 
-find_package(QT NAMES Qt6 COMPONENTS Widgets Core Charts Concurrent Network REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Charts Concurrent Network REQUIRED)
+find_package(QT NAMES Qt6 COMPONENTS Widgets Core Charts Network REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Charts Network REQUIRED)
 
 set(SOURCES
     main.cpp
     mainwindow.cpp
     barchartwidget.cpp
-    calibration.cpp
-    channelmap.cpp
-    controller.cpp
-    datadelegate.cpp
-    decoder.cpp
-    filewatcher.cpp
-    filewatcherworker.cpp
     flowlayout.cpp
     histchartwidget.cpp
     mousepresseater.cpp
-    histogrammanager.cpp
-    peakfinder.cpp
-    energypeak.cpp
     chartview.cpp
-    piecewiselinearfunction.cpp
     piechartwidget.cpp
-    processingworker.cpp
     settings.cpp
     myspinnerwidget.cpp
+
     client.cpp
 )
 
 set(HEADERS
     mainwindow.h
-    adcm_df.h
     barchartwidget.h
-    calibration.h
-    channelmap.h
     constants.h
-    controller.h
-    datadelegate.h
-    decoder.h
-    filewatcher.h
-    filewatcherworker.h
     flowlayout.h
     histchartwidget.h
     mousepresseater.h
     piechartwidget.h
-    processingworker.h
-    utils.h
-    histogrammanager.h
-    peakfinder.h
-    energypeak.h
     chartview.h
-    piecewiselinearfunction.h
     settings.h
     myspinnerwidget.h
     client.h
@@ -111,34 +86,13 @@ else()
     endif()
 endif()
 
-# Get ROOT include path
-execute_process(
-    COMMAND root-config --incdir
-    OUTPUT_VARIABLE ROOT_INCLUDE_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
 
-# Get ROOT libraries
-execute_process(
-    COMMAND root-config --libs
-    OUTPUT_VARIABLE ROOT_LIBS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# Split the libraries into a list
-string(REPLACE " " ";" ROOT_LIBRARIES ${ROOT_LIBS})
-
-target_include_directories(adcmminer-client PRIVATE
-    ${ROOT_INCLUDE_DIR}
-)
 
 target_link_libraries(adcmminer-client PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Charts
     Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Concurrent
     Qt${QT_VERSION_MAJOR}::Network
-    ${ROOT_LIBRARIES}
 )
 
 set_target_properties(adcmminer-client PROPERTIES

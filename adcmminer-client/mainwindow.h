@@ -2,14 +2,16 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPushButton>
+#include <QLineEdit>
+#include <QLabel>
+#include <QGridLayout>
 
 #include "constants.h"
 #include "settings.h"
 #include "piechartwidget.h"
 #include "histchartwidget.h"
 #include "barchartwidget.h"
-
-#include "controller.h"
 
 #include "client.h"
 
@@ -51,8 +53,6 @@ private:
 
     QPushButton *m_pushButtonStartStop;
     QPushButton *m_pushButtonReset;
-
-    Controller *m_controller;
 
     QTabWidget *m_tabWidget;
 
