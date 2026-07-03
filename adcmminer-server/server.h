@@ -42,6 +42,9 @@ private:
     void sendComplexDataToClient(QLocalSocket *clientSocket,
                                  const QMap<QString, QList<QPointF>> &data,
                                  const QMap<QString, QStringList> &text);
+    void sendComplexDataToClientTime(QLocalSocket *clientSocket,
+                                 const QMap<QString, QList<QPointF>> &data,
+                                 const QMap<QString, QStringList> &text);
 };
 
 

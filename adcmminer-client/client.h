@@ -25,6 +25,7 @@ signals:
     void connectionError(const QString &errorText);
     void resultReceived(ResultData resultData);
     void complexDataReceived(const QMap<QString, QList<QPointF>> &data, const QMap<QString, QStringList> &text);
+    void complexDataReceivedTime(const QMap<QString, QList<QPointF>> &data, const QMap<QString, QStringList> &text);
 
 private slots:
     void onConnected();

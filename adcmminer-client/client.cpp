@@ -51,7 +51,7 @@ void Client::connectToServer(const QString &serverName)
 void Client::onConnected() {
 
 //    qDebug() << "Client connected asynchronously!";
-//    emit connected();
+    emit connected();
     qDebug() << "Успешно подключено к серверу!";
     m_reconnectTimer->stop(); // Подключились -> перестаем долбиться реконнектами
     m_heartbeatTimer->start(HEARTBEAT_TIMEOUT_MS);
@@ -150,6 +150,30 @@ void Client::onReadyRead() {
 
             // Передаем данные дальше (например, генерируем сигнал для UI) [1]
             emit complexDataReceived(receivedData, receivedText);
+        } else if (type == MessageType::ComplexDataPayloadTime) {
+            in.startTransaction(); // Начинаем транзакцию для чтения тела данных [1]
+
+            // Создаем пустые объекты для приема [1]
+            QMap<QString, QList<QPointF>> receivedData;
+            QMap<QString, QStringList> receivedText;
+
+            // Читаем данные строго в том же порядке, в каком записывали! [1]
+            in >> receivedData;
+            in >> receivedText;
+
+            if (!in.commitTransaction()) {
+                // Если сеть не успела передать все элементы QMap,
+                // транзакция откатится, и мы вернемся сюда при следующем readyRead [1]
+                break;
+            }
+
+            // Данные успешно и полностью получены без блокировки потока [1]
+            qDebug() << "Получены комплексные данные.";
+            qDebug() << "Ключей в карте координат:" << receivedData.size();
+            qDebug() << "Ключей в карте текстов:" << receivedText.size();
+
+            // Передаем данные дальше (например, генерируем сигнал для UI) [1]
+            emit complexDataReceivedTime(receivedData, receivedText);
         }
         else if (type == MessageType::ResultPayload) {
             ResultData result;
@@ -193,9 +217,10 @@ void Client::onErrorOccurred(QLocalSocket::LocalSocketError socketError) {
     m_heartbeatTimer->stop();
     if (!m_reconnectTimer->isActive()) {
         m_reconnectTimer->start(RECONNECT_INTERVAL_MS);
+        emit connectionError(m_socket->errorString());
+        qDebug() << "Client Socket Error:" << m_socket->errorString();
     }
-//    emit connectionError(m_socket->errorString());
-//    qDebug() << "Client Socket Error:" << m_socket->errorString();
+
 }
 
 void Client::attemptReconnect()

@@ -291,6 +291,7 @@ void MainWindow::connectToServer(const QString &serverName)
             qDebug() << "Status (Completed):" << resultData.isCompleted;
         });
         connect(m_client, &Client::complexDataReceived, this, &MainWindow::newDataEnergyByAlpha);
+        connect(m_client, &Client::complexDataReceivedTime, this, &MainWindow::newDataTimeCorrectedByAlpha);
         m_client->connectToServer(serverName);
     }
 }

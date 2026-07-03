@@ -3,7 +3,7 @@
 #include <QDateTime>
 #include <iostream>
 #include <QPointF>
-
+#include <QPointer>
 
 Server::Server(QObject *parent)
     : QObject{parent}
@@ -14,7 +14,7 @@ Server::Server(QObject *parent)
     m_controller = new Controller("/home/egor/build-adcmemulate-Desktop-Debug/adcm.dat");
 
     connect(m_controller, &Controller::handleResultsEnergyByAlpha, this, &Server::resultsEnergyByAlpha);
-    connect(m_controller, &Controller::handleResultsEnergyByAlpha, this, &Server::resultsTimeCorrectedByAlpha);
+    connect(m_controller, &Controller::handleResultsTimeCorrectedByAlpha, this, &Server::resultsTimeCorrectedByAlpha);
     connect(m_server, &QLocalServer::newConnection, this, &Server::onNewConnection);
 }
 
@@ -60,11 +60,12 @@ void Server::onNewConnection() {
                 this->processIncomingData(clientSocket);
             });
 
-            connect(this, &Server::resultsEnergyByAlpha, this, [this, clientSocket](const QMap<QString, QList<QPointF> > &data, const QMap<QString, QStringList> &text){
-                sendComplexDataToClient(clientSocket, data, text);
+            connect(this, &Server::resultsEnergyByAlpha, this, [this, clientSocket = QPointer<QLocalSocket>(clientSocket)](const QMap<QString, QList<QPointF> > &data, const QMap<QString, QStringList> &text){
+                    sendComplexDataToClient(clientSocket, data, text);
+
             });
-            connect(this, &Server::resultsTimeCorrectedByAlpha, this, [this, clientSocket](const QMap<QString, QList<QPointF> > &data, const QMap<QString, QStringList> &text){
-                sendComplexDataToClient(clientSocket, data, text);
+            connect(this, &Server::resultsTimeCorrectedByAlpha, this, [this, clientSocket = QPointer<QLocalSocket>(clientSocket)](const QMap<QString, QList<QPointF> > &data, const QMap<QString, QStringList> &text){
+                sendComplexDataToClientTime(clientSocket, data, text);
             });
 
             connect(clientSocket, &QLocalSocket::disconnected, this, &Server::onClientDisconnected);
@@ -198,6 +199,36 @@ void Server::sendComplexDataToClient(QLocalSocket *clientSocket,
 
     // 2. Записываем тип сообщения [1]
     out << static_cast<quint8>(MessageType::ComplexDataPayload);
+
+    // 3. Записываем сами коллекции (Qt автоматически сериализует QMap, QList и QPointF) [1]
+    out << data;
+    out << text;
+
+    // 4. Возвращаемся в начало и перезаписываем точный размер тела пакета [1]
+    out.device()->seek(0);
+    out << quint32(block.size() - sizeof(quint32));
+
+    // 5. Неблокирующая отправка в буфер [1]
+    clientSocket->write(block);
+    clientSocket->flush();
+    qDebug() << "Сервер отправил ComplexData пакет размером:" << block.size() << "байт.";
+}
+
+void Server::sendComplexDataToClientTime(QLocalSocket *clientSocket, const QMap<QString, QList<QPointF> > &data, const QMap<QString, QStringList> &text)
+{
+    if (!clientSocket || clientSocket->state() != QLocalSocket::ConnectedState) {
+        return;
+    }
+
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_DefaultCompiledVersion); // Фиксируем версию Qt для сериализации [1]
+
+    // 1. Резервируем 4 байта под размер пакета [1]
+    out << quint32(0);
+
+    // 2. Записываем тип сообщения [1]
+    out << static_cast<quint8>(MessageType::ComplexDataPayloadTime);
 
     // 3. Записываем сами коллекции (Qt автоматически сериализует QMap, QList и QPointF) [1]
     out << data;
