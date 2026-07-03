@@ -17,8 +17,8 @@ if(NOT CMAKE_THREAD_LIBS_INIT)
     set(Threads_FOUND TRUE)
 endif()
 
-find_package(QT NAMES Qt6 COMPONENTS Widgets Core Charts Concurrent REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Charts Concurrent REQUIRED)
+#find_package(QT NAMES Qt6 COMPONENTS Widgets Core Charts Concurrent REQUIRED)
+#find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Charts Concurrent REQUIRED)
 
 add_subdirectory(adcmminer-client)
 add_subdirectory(adcmminer-server)

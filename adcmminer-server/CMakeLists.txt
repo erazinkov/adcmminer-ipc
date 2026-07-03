@@ -17,8 +17,8 @@ if(NOT CMAKE_THREAD_LIBS_INIT)
     set(Threads_FOUND TRUE)
 endif()
 
-find_package(QT NAMES Qt6 COMPONENTS Core Network Concurrent REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Concurrent REQUIRED)
+find_package(QT NAMES Qt6 COMPONENTS Core Network Concurrent Gui REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Concurrent Gui REQUIRED)
 
 set(SOURCES
     main.cpp
