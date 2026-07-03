@@ -29,7 +29,7 @@ void ProcessingWorker::doWorkS(const QString &path)
     m.insert(tr("Calibration"), std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
     std::cout << "Calibration " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << std::endl;
     start = std::chrono::steady_clock::now();
-//    histToPointsTimeCorrectedByAlpha();
+    histToPointsTimeCorrectedByAlpha();
     histToPointsAmpByGamma();
     stop = std::chrono::steady_clock::now();
     QMap<QString, double> countersA;

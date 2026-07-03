@@ -16,13 +16,13 @@ Controller::Controller(const QString &path)
     connect(this, &Controller::operatePath, m_fileWatcherWorker, &FileWatcherWorker::doWorkPath);
     connect(m_fileWatcherThread, &QThread::finished, m_fileWatcherWorker, &QObject::deleteLater);
 //    connect(this, &Controller::operateReset, m_processingWorker, &ProcessingWorker::doWorkReset);
-//    connect(m_processingWorker, &ProcessingWorker::resultReadyTimeCorrectedByAlpha, this, &Controller::handleResultsTimeCorrectedByAlpha);
+    connect(m_processingWorker, &ProcessingWorker::resultReadyTimeCorrectedByAlpha, this, &Controller::handleResultsTimeCorrectedByAlpha);
     connect(m_processingWorker, &ProcessingWorker::resultReadyEnergyByAlpha, this, &Controller::handleResultsEnergyByAlpha);
 //    connect(m_processingWorker, &ProcessingWorker::resultReadyProcessing, this, &Controller::handleResultsProcessing);
     connect(m_processingThread, &QThread::finished, m_processingWorker, &QObject::deleteLater);
 
     connect(m_fileWatcherWorker, &FileWatcherWorker::resultReadyCheck, [this](const QString &message, const QString &path, const bool &isModified){
-        qDebug() << message;
+//        qDebug() << message;
         emit handleResultsReadyCheck(message);
         if (isModified) {
             m_processingWorker->doWorkS(path);
